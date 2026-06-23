@@ -14,8 +14,8 @@ env:
   - variable: FIREBASE_ADMIN_PRIVATE_KEY
     secret: FIREBASE_ADMIN_PRIVATE_KEY
   - variable: FIREBASE_ADMIN_PROJECT_ID
-    value: your-project-id
+    value: spotsolve
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    value: your-project-id
+    value: spotsolve
   - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-    value: your-project.appspot.com
+    value: spotsolve.appspot.com

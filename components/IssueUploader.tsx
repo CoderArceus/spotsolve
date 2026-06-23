@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import Image from "next/image";
 import {
   Upload,
+  Camera,
   MapPin,
   AlertTriangle,
   CheckCircle2,
@@ -32,6 +33,60 @@ export function IssueUploader() {
   } | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState("");
+
+  const stopCamera = useCallback(() => {
+    if (videoRef.current?.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((track) => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraOpen(false);
+  }, []);
+
+  useEffect(() => {
+    return () => stopCamera();
+  }, [stopCamera]);
+
+  const startCamera = async () => {
+    try {
+      setCameraError("");
+      setIsCameraOpen(true);
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "environment" } 
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      setCameraError("Camera access denied or unavailable.");
+    }
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const f = new File([blob], "camera-capture.jpg", { type: "image/jpeg" });
+            setFile(f);
+            setPreview(URL.createObjectURL(f));
+            stopCamera();
+            setErrorMsg("");
+          }
+        }, "image/jpeg", 0.9);
+      }
+    }
+  };
 
   const onDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
@@ -130,6 +185,7 @@ export function IssueUploader() {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+    stopCamera();
   };
 
   if (state === "done" && result) {
@@ -224,40 +280,94 @@ export function IssueUploader() {
 
   return (
     <div className="space-y-6">
-      {/* Drop zone */}
-      <div
-        onDrop={onDrop}
-        onDragOver={(e) => e.preventDefault()}
-        onClick={() => fileInputRef.current?.click()}
-        className="border-2 border-dashed border-[#27272a] rounded-xl p-10 text-center cursor-pointer hover:border-[#10b981] hover:bg-emerald-950/10 transition-all"
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={onFileChange}
-        />
-        {preview ? (
-          <div className="relative mx-auto rounded-xl overflow-hidden max-h-48 w-fit">
+      {/* Upload Zone */}
+      {isCameraOpen ? (
+        <div className="border-2 border-[#27272a] rounded-xl overflow-hidden bg-black relative flex flex-col min-h-[300px]">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            className="w-full max-h-[60vh] object-contain bg-black"
+          />
+          <canvas ref={canvasRef} className="hidden" />
+          
+          <div className="absolute inset-0 flex flex-col justify-between p-4 bg-gradient-to-b from-black/60 via-transparent to-black/80">
+            <div className="flex justify-between items-center">
+              <span className="text-white text-xs font-medium px-2 py-1 bg-black/50 rounded-lg backdrop-blur-sm">Camera Mode</span>
+              <button onClick={stopCamera} className="text-white/80 hover:text-white p-2">
+                ✕
+              </button>
+            </div>
+            
+            <div className="flex flex-col items-center pb-2">
+              {cameraError && (
+                <p className="text-red-400 text-sm mb-4 bg-red-950/80 px-3 py-1.5 rounded-xl">{cameraError}</p>
+              )}
+              <button 
+                onClick={capturePhoto}
+                className="w-16 h-16 rounded-full bg-white border-4 border-zinc-300 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+              >
+                <div className="w-14 h-14 rounded-full border-2 border-black/10" />
+              </button>
+              <p className="text-white/70 text-xs mt-3">Tap to capture</p>
+            </div>
+          </div>
+        </div>
+      ) : preview ? (
+        <div 
+          onClick={() => fileInputRef.current?.click()}
+          className="border-2 border-dashed border-[#27272a] rounded-xl p-4 text-center cursor-pointer hover:border-[#10b981] hover:bg-emerald-950/10 transition-all group"
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={onFileChange}
+          />
+          <div className="relative mx-auto rounded-xl overflow-hidden max-h-48 w-fit inline-block">
             <Image
               src={preview}
               alt="Preview"
               width={400}
               height={300}
-              className="rounded-xl object-contain"
+              className="rounded-xl object-contain group-hover:opacity-50 transition-opacity"
             />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="bg-black/80 text-white text-xs font-medium px-3 py-1.5 rounded-full backdrop-blur-md">Change Photo</span>
+            </div>
           </div>
-        ) : (
-          <>
-            <Upload className="mx-auto w-10 h-10 text-[#71717a] mb-3" />
-            <p className="text-[#71717a] text-sm">
-              Drag a photo here or click to choose
-            </p>
-            <p className="text-zinc-600 text-xs mt-1">JPG, PNG, WebP</p>
-          </>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3" onDrop={onDrop} onDragOver={(e) => e.preventDefault()}>
+          {/* Upload Button */}
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="border-2 border-dashed border-[#27272a] rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#10b981] hover:bg-emerald-950/10 transition-all min-h-[140px]"
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={onFileChange}
+            />
+            <Upload className="w-8 h-8 text-[#71717a] mb-3" />
+            <p className="text-zinc-300 text-sm font-medium">Upload File</p>
+            <p className="text-zinc-500 text-xs mt-1">From gallery</p>
+          </div>
+
+          {/* Camera Button */}
+          <div
+            onClick={startCamera}
+            className="border-2 border-dashed border-[#27272a] rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#10b981] hover:bg-emerald-950/10 transition-all min-h-[140px]"
+          >
+            <Camera className="w-8 h-8 text-[#71717a] mb-3" />
+            <p className="text-zinc-300 text-sm font-medium">Take Photo</p>
+            <p className="text-zinc-500 text-xs mt-1">Use camera</p>
+          </div>
+        </div>
+      )}
 
       {/* Location */}
       <div className="space-y-2">

@@ -75,57 +75,51 @@ const MOCK_HEROES: Hero[] = [
 export function HeroesLeaderboard() {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="flex flex-col gap-4 mb-8">
         {MOCK_HEROES.slice(0, 3).map((hero, index) => (
-          <Card key={hero.id} className={`p-6 border-[#27272a] bg-[#18181b] relative overflow-hidden group hover:border-emerald-500/50 transition-all ${index === 0 ? "md:-mt-4" : ""}`}>
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-400" />
+          <Card key={hero.id} className="p-4 border-[#27272a] bg-[#18181b] relative overflow-hidden group hover:border-emerald-500/50 transition-all flex items-center gap-4">
+            <div className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-emerald-500 to-teal-400" />
             
-            <div className="flex flex-col items-center text-center">
-              <div className="relative mb-4">
-                {index === 0 && <Crown className="absolute -top-6 left-1/2 -translate-x-1/2 w-6 h-6 text-yellow-400 drop-shadow-md" />}
-                <img src={hero.avatar} alt={hero.name} className="w-20 h-20 rounded-full border-4 border-[#27272a]" />
-                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-xs font-bold text-black border-2 border-[#18181b]">
-                  {index + 1}
-                </div>
+            <div className="relative shrink-0">
+              {index === 0 && <Crown className="absolute -top-3 -left-3 w-5 h-5 text-yellow-400 drop-shadow-md rotate-[-15deg] z-10" />}
+              <img src={hero.avatar} alt={hero.name} className="w-14 h-14 rounded-full border-2 border-[#27272a]" />
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center text-[10px] font-bold text-black border-2 border-[#18181b]">
+                {index + 1}
               </div>
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base font-bold text-white truncate">{hero.name}</h3>
+              <p className="text-emerald-400 text-xs font-medium mb-1">Lvl {hero.level} {hero.rank}</p>
               
-              <h3 className="text-lg font-bold text-white mb-1">{hero.name}</h3>
-              <p className="text-emerald-400 text-sm font-medium mb-3">Level {hero.level} {hero.rank}</p>
-              
-              <div className="w-full flex justify-between text-xs text-zinc-400 mb-4 px-4">
-                <div className="flex flex-col"><span className="text-white font-bold">{hero.reports}</span> Reports</div>
-                <div className="flex flex-col"><span className="text-white font-bold">{hero.resolved}</span> Resolved</div>
-                <div className="flex flex-col"><span className="text-emerald-400 font-bold">{hero.xp}</span> XP</div>
-              </div>
-
-              <div className="flex flex-wrap gap-1 justify-center">
-                {hero.badges.map(badge => (
-                  <Badge key={badge} variant="outline" className="text-[10px] py-0 border-emerald-500/30 text-emerald-300 bg-emerald-500/10">
+              <div className="flex flex-wrap gap-1">
+                {hero.badges.slice(0, 1).map(badge => (
+                  <Badge key={badge} variant="outline" className="text-[9px] py-0 border-emerald-500/30 text-emerald-300 bg-emerald-500/10 px-1.5 truncate max-w-[100px]">
                     {badge}
                   </Badge>
                 ))}
               </div>
+            </div>
+
+            <div className="text-right shrink-0">
+              <div className="text-sm font-bold text-emerald-400">{hero.xp} <span className="text-[10px] font-normal text-zinc-500">XP</span></div>
+              <div className="text-xs text-zinc-400 font-medium">{hero.reports} rep</div>
             </div>
           </Card>
         ))}
       </div>
 
       <div className="space-y-2">
+        <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">Honorable Mentions</h4>
         {MOCK_HEROES.slice(3).map((hero, index) => (
-          <div key={hero.id} className="flex items-center gap-4 p-4 rounded-xl border border-[#27272a] bg-[#18181b]/50 hover:bg-[#27272a]/50 transition-colors">
-            <div className="w-8 text-center font-mono font-bold text-zinc-500">#{index + 4}</div>
-            <img src={hero.avatar} alt={hero.name} className="w-10 h-10 rounded-full" />
+          <div key={hero.id} className="flex items-center gap-3 p-3 rounded-xl border border-[#27272a] bg-[#18181b]/50 hover:bg-[#27272a]/50 transition-colors">
+            <div className="w-5 text-center font-mono font-bold text-zinc-500 text-xs">#{index + 4}</div>
+            <img src={hero.avatar} alt={hero.name} className="w-8 h-8 rounded-full" />
             <div className="flex-1 min-w-0">
-              <h4 className="text-white font-medium truncate">{hero.name}</h4>
-              <div className="flex items-center gap-2 text-xs text-zinc-400">
-                <span className="text-emerald-400">Level {hero.level}</span>
-                <span>•</span>
-                <span>{hero.xp} XP</span>
-              </div>
+              <h4 className="text-sm text-white font-medium truncate">{hero.name}</h4>
             </div>
-            <div className="hidden sm:flex items-center gap-4 text-sm text-zinc-400">
-              <div className="flex items-center gap-1"><Shield className="w-4 h-4" /> {hero.resolved}</div>
-              <div className="flex items-center gap-1"><Star className="w-4 h-4 text-yellow-500" /> {hero.reports}</div>
+            <div className="text-xs font-bold text-emerald-400 shrink-0">
+              {hero.xp} <span className="font-normal text-zinc-500">XP</span>
             </div>
           </div>
         ))}
