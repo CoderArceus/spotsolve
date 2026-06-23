@@ -36,21 +36,21 @@ export default async function CommunityPage() {
   const initialTickets = await getTickets();
 
   return (
-    <div className="space-y-8 max-w-3xl mx-auto">
+    <div className="space-y-8 max-w-3xl mx-auto pb-32 animate-in fade-in duration-500">
       <div>
-        <h1 className="text-2xl font-bold text-white">Community & Heroes</h1>
-        <p className="text-[#71717a] text-sm mt-1">
+        <h1 className="text-4xl font-bold text-white tracking-tight">Community & Heroes</h1>
+        <p className="text-[#a1a1aa] text-sm mt-2">
           Recent reports, community verification, and local heroes.
         </p>
       </div>
 
       <Tabs defaultValue="feed" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-[#18181b] border border-[#27272a] mb-8">
-          <TabsTrigger value="feed">Live Feed</TabsTrigger>
-          <TabsTrigger value="heroes">Top Heroes</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 bg-black/40 backdrop-blur-xl border border-white/10 mb-8 p-1 h-12 rounded-xl">
+          <TabsTrigger value="feed" className="rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white transition-all">Live Feed</TabsTrigger>
+          <TabsTrigger value="heroes" className="rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white transition-all">Top Heroes</TabsTrigger>
         </TabsList>
         <TabsContent value="feed" className="mt-0">
-          <div className="bg-[#18181b] rounded-2xl border border-[#27272a] p-4 sm:p-6 shadow-xl">
+          <div className="glass-card rounded-3xl p-4 sm:p-6 shadow-2xl">
             <InfiniteTicketFeed initialTickets={initialTickets} />
           </div>
         </TabsContent>

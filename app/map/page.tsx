@@ -1,5 +1,6 @@
 import { Ticket } from "@/types";
 import TicketMap from "@/components/TicketMap";
+import { TicketFeed } from "@/components/TicketFeed";
 import { StatsDashboard } from "@/components/StatsDashboard";
 import { adminDb } from "@/lib/firebase-admin";
 
@@ -31,20 +32,30 @@ async function getAllTickets(): Promise<Ticket[]> {
 
 export default async function MapPage() {
   const allTickets = await getAllTickets();
+  const validTickets = allTickets.filter((t) => t.isValidIssue);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-24">
       <div>
-        <h1 className="text-2xl font-bold text-white">Live Map & Analytics</h1>
-        <p className="text-[#71717a] text-sm mt-1">
+        <h1 className="text-4xl font-bold text-white tracking-tight">Live Map & Analytics</h1>
+        <p className="text-[#a1a1aa] text-sm mt-2">
           Geospatial visualization and overview of community issues.
         </p>
       </div>
 
       <StatsDashboard tickets={allTickets} />
 
-      <div className="bg-[#18181b] rounded-2xl border border-[#27272a] p-4 shadow-xl">
-        <TicketMap tickets={allTickets} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 glass-card rounded-3xl p-4 h-[600px] flex flex-col">
+          <TicketMap tickets={allTickets} />
+        </div>
+        
+        <div className="glass-card rounded-3xl p-4 h-[600px] flex flex-col">
+          <h2 className="text-lg font-bold text-white mb-4">Live Issues</h2>
+          <div className="overflow-y-auto flex-1 pr-2 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+            <TicketFeed tickets={validTickets.slice(0, 50)} />
+          </div>
+        </div>
       </div>
     </div>
   );
