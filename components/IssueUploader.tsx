@@ -16,6 +16,7 @@ import { SeverityBadge } from "./SeverityBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/lib/AuthContext";
 
 type State = "idle" | "uploading" | "analyzing" | "done" | "error";
 
@@ -37,6 +38,13 @@ export function IssueUploader() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraError, setCameraError] = useState("");
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user?.email && !email) {
+      setEmail(user.email);
+    }
+  }, [user]);
 
   const stopCamera = useCallback(() => {
     if (videoRef.current?.srcObject) {
@@ -141,6 +149,7 @@ export function IssueUploader() {
       fd.append("longitude", lon.toString());
       if (email) fd.append("citizenEmail", email);
       if (userDescription) fd.append("userDescription", userDescription);
+      if (user) fd.append("citizenUid", user.uid);
 
       setState("analyzing");
       const res = await fetch("/api/analyze-issue", {

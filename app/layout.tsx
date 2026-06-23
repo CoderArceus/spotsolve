@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
+import { AuthProvider } from "@/lib/AuthContext";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -33,8 +34,10 @@ export default function RootLayout({
         className="bg-background text-foreground min-h-screen font-sans antialiased relative overflow-x-hidden"
         suppressHydrationWarning
       >
-        <Navbar />
-        <main className="max-w-6xl mx-auto px-6 pt-24 pb-16">{children}</main>
+        <AuthProvider>
+          <Navbar />
+          <main className="max-w-6xl mx-auto px-6 pt-24 pb-16">{children}</main>
+        </AuthProvider>
       </body>
     </html>
   );
