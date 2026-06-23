@@ -2,7 +2,6 @@ import { Ticket } from "@/types";
 import { InfiniteTicketFeed } from "@/components/InfiniteTicketFeed";
 import { HeroesLeaderboard } from "@/components/HeroesLeaderboard";
 import { adminDb } from "@/lib/firebase-admin";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 async function getTickets(): Promise<Ticket[]> {
   try {
@@ -36,7 +35,7 @@ export default async function CommunityPage() {
   const initialTickets = await getTickets();
 
   return (
-    <div className="space-y-8 max-w-3xl mx-auto pb-32 animate-in fade-in duration-500">
+    <div className="space-y-8 max-w-[1400px] mx-auto pb-32 animate-in fade-in duration-500 px-6 pt-10">
       <div>
         <h1 className="text-4xl font-bold text-white tracking-tight">Community & Heroes</h1>
         <p className="text-[#a1a1aa] text-sm mt-2">
@@ -44,20 +43,20 @@ export default async function CommunityPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="feed" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-black/40 backdrop-blur-xl border border-white/10 mb-8 p-1 h-12 rounded-xl">
-          <TabsTrigger value="feed" className="rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white transition-all">Live Feed</TabsTrigger>
-          <TabsTrigger value="heroes" className="rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white transition-all">Top Heroes</TabsTrigger>
-        </TabsList>
-        <TabsContent value="feed" className="mt-0">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="lg:col-span-3 space-y-6">
           <div className="glass-card rounded-3xl p-4 sm:p-6 shadow-2xl">
+            <h2 className="text-xl font-bold text-white mb-6">Live Feed</h2>
             <InfiniteTicketFeed initialTickets={initialTickets} />
           </div>
-        </TabsContent>
-        <TabsContent value="heroes" className="mt-0">
-          <HeroesLeaderboard />
-        </TabsContent>
-      </Tabs>
+        </div>
+
+        <div className="lg:col-span-1">
+          <div className="sticky top-10">
+            <HeroesLeaderboard />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

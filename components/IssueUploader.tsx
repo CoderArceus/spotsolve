@@ -25,6 +25,7 @@ export function IssueUploader() {
   const [lat, setLat] = useState<number>(28.6139);
   const [lon, setLon] = useState<number>(77.209);
   const [email, setEmail] = useState("");
+  const [userDescription, setUserDescription] = useState("");
   const [result, setResult] = useState<{
     ticket: Ticket;
     analysis: GeminiAnalysisResult;
@@ -84,6 +85,7 @@ export function IssueUploader() {
       fd.append("latitude", lat.toString());
       fd.append("longitude", lon.toString());
       if (email) fd.append("citizenEmail", email);
+      if (userDescription) fd.append("userDescription", userDescription);
 
       setState("analyzing");
       const res = await fetch("/api/analyze-issue", {
@@ -274,16 +276,30 @@ export function IssueUploader() {
             value={lat}
             onChange={(e) => setLat(parseFloat(e.target.value))}
             placeholder="Latitude"
-            className="bg-[#18181b] border-[#27272a] rounded-xl text-sm text-[#fafafa]"
+            className="bg-[#18181b] border-[#27272a] rounded-xl text-sm text-[#fafafa] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
           <Input
             type="number"
             value={lon}
             onChange={(e) => setLon(parseFloat(e.target.value))}
             placeholder="Longitude"
-            className="bg-[#18181b] border-[#27272a] rounded-xl text-sm text-[#fafafa]"
+            className="bg-[#18181b] border-[#27272a] rounded-xl text-sm text-[#fafafa] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
         </div>
+      </div>
+
+      {/* Description (optional) */}
+      <div>
+        <label className="text-sm text-[#71717a] block mb-2">
+          Additional Details <span className="text-zinc-600">(optional)</span>
+        </label>
+        <textarea
+          value={userDescription}
+          onChange={(e) => setUserDescription(e.target.value)}
+          placeholder="Provide more context about the issue..."
+          rows={3}
+          className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-sm text-[#fafafa] p-3 focus:outline-none focus:ring-2 focus:ring-[#10b981]/50 resize-none"
+        />
       </div>
 
       {/* Email (optional) */}

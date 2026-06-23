@@ -49,6 +49,8 @@ export async function POST(req: NextRequest) {
     const longitude = parseFloat(formData.get("longitude") as string);
     const citizenEmail =
       (formData.get("citizenEmail") as string | null) ?? undefined;
+    const userDescription =
+      (formData.get("userDescription") as string | null) ?? undefined;
 
     if (!file) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 });
@@ -104,6 +106,9 @@ export async function POST(req: NextRequest) {
     let emergencyReason: string | undefined;
 
     let rawText = "";
+    
+    const basePrompt = "Analyze this community issue image. If it is Critical severity, call the emergency alert tool. Then return the structured JSON analysis.";
+    const fullPrompt = userDescription ? `${basePrompt}\nThe user provided the following additional context: "${userDescription}"` : basePrompt;
 
     try {
       // First pass: allow tool calling
@@ -115,7 +120,7 @@ export async function POST(req: NextRequest) {
             parts: [
               imagePart,
               {
-                text: "Analyze this community issue image. If it is Critical severity, call the emergency alert tool. Then return the structured JSON analysis.",
+                text: fullPrompt,
               },
             ],
           },
@@ -149,7 +154,7 @@ export async function POST(req: NextRequest) {
             role: "user",
             parts: [
               imagePart,
-              { text: "Return your structured JSON analysis of this image." },
+              { text: `Return your structured JSON analysis of this image.\n${userDescription ? `The user provided the following additional context: "${userDescription}"` : ""}` },
             ],
           },
         ],

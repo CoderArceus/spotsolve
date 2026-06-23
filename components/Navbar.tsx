@@ -50,9 +50,9 @@ export function Navbar() {
 
         <div className="w-[1px] h-8 bg-white/10 mx-1" />
         
-        <button className="flex items-center justify-center w-12 h-12 rounded-full text-zinc-400 hover:text-white hover:bg-white/5 transition-colors mx-2 group">
+        <Link href="/profile" className="flex items-center justify-center w-12 h-12 rounded-full text-zinc-400 hover:text-white hover:bg-white/5 transition-colors mx-2 group">
           <User className="w-5 h-5 group-hover:scale-110 transition-transform" />
-        </button>
+        </Link>
       </nav>
     </div>
   );
