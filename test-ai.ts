@@ -10,7 +10,7 @@ async function run() {
     const models = await ai.models.list();
     console.log("AVAILABLE MODELS:");
     for await (const m of models) {
-      if (m.name.includes("gemini")) {
+      if (m.name?.includes("gemini")) {
         console.log(m.name);
       }
     }
