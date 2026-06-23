@@ -1,0 +1,21 @@
+runConfig:
+  runtime: nodejs20
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
+  minInstances: 0
+  maxInstances: 10
+
+env:
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY
+  - variable: FIREBASE_ADMIN_CLIENT_EMAIL
+    secret: FIREBASE_ADMIN_CLIENT_EMAIL
+  - variable: FIREBASE_ADMIN_PRIVATE_KEY
+    secret: FIREBASE_ADMIN_PRIVATE_KEY
+  - variable: FIREBASE_ADMIN_PROJECT_ID
+    value: your-project-id
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: your-project-id
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: your-project.appspot.com
