@@ -3,15 +3,24 @@ import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { getAuth } from "firebase-admin/auth";
 
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    }),
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  });
+try {
+  if (!getApps().length) {
+    let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
+    if (privateKey) {
+      privateKey = privateKey.replace(/\\n/g, "\n").replace(/^"|"$/g, "");
+    }
+    
+    initializeApp({
+      credential: cert({
+        projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+        privateKey: privateKey,
+      }),
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    });
+  }
+} catch (error) {
+  console.error("Firebase Admin Initialization Error:", error);
 }
 
 export const adminDb = getFirestore();
