@@ -4,7 +4,6 @@ import { GeminiAnalysisResult, Ticket, TicketStatus } from "@/types";
 import { checkRateLimit, getClientIp, checkCooldown, setCooldown } from "@/lib/rateLimiter";
 import { withRetry } from "@/lib/retry";
 import { haversineDistance } from "@/lib/haversine";
-import { isWithinSupportedCity } from "@/lib/cityBoundary";
 import { calculatePriority } from "@/lib/priority";
 import { v4 as uuidv4 } from "uuid";
 
@@ -77,13 +76,6 @@ export async function POST(req: NextRequest) {
 
     if (!userDescription || userDescription.trim().length < 20) {
       return NextResponse.json({ error: "Description must be at least 20 characters long." }, { status: 400 });
-    }
-
-    if (!isWithinSupportedCity(latitude, longitude)) {
-      return NextResponse.json(
-        { error: "Reports can only be submitted within supported cities." },
-        { status: 400 }
-      );
     }
 
     // 2. Validate non-file fields
