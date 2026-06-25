@@ -91,7 +91,10 @@ export function IssueTableClient({ initialTickets }: { initialTickets: Ticket[] 
                 </td>
                 <td className="px-6 py-4">
                   <button 
-                    onClick={() => setSelectedTicket(ticket)}
+                    onClick={() => {
+                      setSelectedTicket(ticket);
+                      setDepartment(ticket.assignedDepartment || "");
+                    }}
                     className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 font-medium text-xs bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-lg transition-colors border border-emerald-500/20"
                   >
                     View & Dispatch

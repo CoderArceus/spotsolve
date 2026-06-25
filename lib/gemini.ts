@@ -14,9 +14,10 @@ Rules:
    - Medium: Inconvenient, may worsen over time
    - High: Safety risk, needs attention within 48 hours
    - Critical: Immediate life-safety risk — sinkholes, exposed wiring, severe flooding
-3. Write a concise 2-sentence description for the maintenance crew.
-4. Assign a confidenceScore between 0.0 (uncertain) and 1.0 (certain).
-5. If severity is Critical, you MUST call the triggerCriticalEmergencyAlert tool before responding.
+3. Assign the correct municipal department from: "Roads & Highways", "Water & Sanitation", "Electricity Board", "Parks & Recreation", "Traffic Authority", "Emergency Services", "General Maintenance".
+4. Write a concise 2-sentence description for the maintenance crew.
+5. Assign a confidenceScore between 0.0 (uncertain) and 1.0 (certain).
+6. If severity is Critical, you MUST call the triggerCriticalEmergencyAlert tool before responding.
 
 Respond ONLY with the JSON schema provided. No markdown, no explanation.
 `;
@@ -34,10 +35,22 @@ export const RESPONSE_SCHEMA = {
       type: Type.STRING,
       enum: ["Low", "Medium", "High", "Critical"],
     },
+    department: {
+      type: Type.STRING,
+      enum: [
+        "Roads & Highways",
+        "Water & Sanitation",
+        "Electricity Board",
+        "Parks & Recreation",
+        "Traffic Authority",
+        "Emergency Services",
+        "General Maintenance"
+      ]
+    },
     description: { type: Type.STRING },
     confidenceScore: { type: Type.NUMBER },
   },
-  required: ["isValidIssue", "category", "severity", "description", "confidenceScore"],
+  required: ["isValidIssue", "category", "severity", "department", "description", "confidenceScore"],
 };
 
 // ─── Agentic Tool Declaration ─────────────────────────────────────────────────

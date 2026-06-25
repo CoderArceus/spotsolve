@@ -12,11 +12,13 @@ import {
 } from "lucide-react";
 import { GeminiAnalysisResult, Ticket } from "@/types";
 import { validateImageFile, compressImage } from "@/lib/imageValidator";
+import { reverseGeocode } from "@/lib/reverseGeocode";
 import { SeverityBadge } from "./SeverityBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/AuthContext";
+import { useLocation } from "@/hooks/useLocation";
 
 type State = "idle" | "uploading" | "analyzing" | "done" | "error";
 
@@ -24,8 +26,10 @@ export function IssueUploader() {
   const [state, setState] = useState<State>("idle");
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [lat, setLat] = useState<number>(28.6139);
-  const [lon, setLon] = useState<number>(77.209);
+  const { coords, error: locationError, loading: locationLoading } = useLocation();
+  const lat = coords?.lat ?? null;
+  const lon = coords?.lng ?? null;
+  const [address, setAddress] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [userDescription, setUserDescription] = useState("");
   const [result, setResult] = useState<{
@@ -46,6 +50,12 @@ export function IssueUploader() {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (lat !== null && lon !== null) {
+      reverseGeocode(lat, lon).then(setAddress);
+    }
+  }, [lat, lon]);
+
   const stopCamera = useCallback(() => {
     if (videoRef.current?.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
@@ -63,6 +73,7 @@ export function IssueUploader() {
     try {
       setCameraError("");
       setIsCameraOpen(true);
+
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: "environment" } 
       });
@@ -98,17 +109,6 @@ export function IssueUploader() {
 
   const onDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
-    const dropped = e.dataTransfer.files[0];
-    if (dropped && dropped.type.startsWith("image/")) {
-      const validationErrors = await validateImageFile(dropped);
-      if (validationErrors.length > 0) {
-        setErrorMsg(validationErrors.map((err) => err.message).join(", "));
-        return;
-      }
-      setErrorMsg("");
-      setFile(dropped);
-      setPreview(URL.createObjectURL(dropped));
-    }
   }, []);
 
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,18 +125,17 @@ export function IssueUploader() {
     }
   };
 
-  const getLocation = () => {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLat(pos.coords.latitude);
-        setLon(pos.coords.longitude);
-      },
-      () => alert("Location access denied. Enter coordinates manually."),
-    );
-  };
-
   const handleSubmit = async () => {
-    if (!file) return;
+    if (!file || lat === null || lon === null) {
+      setErrorMsg("Image and location are required.");
+      return;
+    }
+    
+    if (userDescription.trim().length < 20) {
+      setErrorMsg("Please describe the issue in at least 20 characters — include nearby landmarks or street names.");
+      return;
+    }
+
     setState("uploading");
     setErrorMsg("");
 
@@ -159,6 +158,7 @@ export function IssueUploader() {
 
       if (!res.ok) {
         const err = await res.json();
+
         if (res.status === 429) {
           const retryAfter = err.retryAfter
             ? Math.ceil(err.retryAfter / 60)
@@ -191,6 +191,7 @@ export function IssueUploader() {
     setFile(null);
     setResult(null);
     setErrorMsg("");
+    setAddress(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -324,16 +325,9 @@ export function IssueUploader() {
         </div>
       ) : preview ? (
         <div 
-          onClick={() => fileInputRef.current?.click()}
+          onClick={startCamera}
           className="border-2 border-dashed border-[#27272a] rounded-xl p-4 text-center cursor-pointer hover:border-[#10b981] hover:bg-emerald-950/10 transition-all group"
         >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={onFileChange}
-          />
           <div className="relative mx-auto rounded-xl overflow-hidden max-h-48 w-fit inline-block">
             <Image
               src={preview}
@@ -343,30 +337,14 @@ export function IssueUploader() {
               className="rounded-xl object-contain group-hover:opacity-50 transition-opacity"
             />
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <span className="bg-black/80 text-white text-xs font-medium px-3 py-1.5 rounded-full backdrop-blur-md">Change Photo</span>
+              <span className="bg-black/80 text-white text-xs font-medium px-3 py-1.5 rounded-full backdrop-blur-md">Retake Photo</span>
             </div>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3" onDrop={onDrop} onDragOver={(e) => e.preventDefault()}>
-          {/* Upload Button */}
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-[#27272a] rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#10b981] hover:bg-emerald-950/10 transition-all min-h-[140px]"
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={onFileChange}
-            />
-            <Upload className="w-8 h-8 text-[#71717a] mb-3" />
-            <p className="text-zinc-300 text-sm font-medium">Upload File</p>
-            <p className="text-zinc-500 text-xs mt-1">From gallery</p>
-          </div>
-
+        <div className="grid grid-cols-1 gap-3">
           {/* Camera Button */}
+
           <div
             onClick={startCamera}
             className="border-2 border-dashed border-[#27272a] rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#10b981] hover:bg-emerald-950/10 transition-all min-h-[140px]"
@@ -379,43 +357,44 @@ export function IssueUploader() {
       )}
 
       {/* Location */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="text-sm text-[#71717a]">Location</label>
-          <button
-            onClick={getLocation}
-            className="flex items-center gap-1.5 text-xs text-[#10b981] hover:text-emerald-300 transition-colors"
-          >
-            <MapPin className="w-3.5 h-3.5" /> Use my location
-          </button>
+      {locationLoading ? (
+        <div className="flex items-center gap-2 text-sm text-emerald-500 bg-emerald-950/20 p-3 rounded-xl border border-emerald-900/30">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Acquiring location...
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Input
-            type="number"
-            value={lat}
-            onChange={(e) => setLat(parseFloat(e.target.value))}
-            placeholder="Latitude"
-            className="bg-[#18181b] border-[#27272a] rounded-xl text-sm text-[#fafafa] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          />
-          <Input
-            type="number"
-            value={lon}
-            onChange={(e) => setLon(parseFloat(e.target.value))}
-            placeholder="Longitude"
-            className="bg-[#18181b] border-[#27272a] rounded-xl text-sm text-[#fafafa] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          />
+      ) : locationError ? (
+        <div className="flex items-center gap-2 text-sm text-amber-500 bg-amber-950/20 p-3 rounded-xl border border-amber-900/30">
+          <AlertTriangle className="w-4 h-4" />
+          {locationError}
         </div>
-      </div>
+      ) : lat !== null && lon !== null && (
+        <div className="flex flex-col gap-2 p-3 rounded-xl border border-emerald-900/30 bg-emerald-950/20">
+          <div className="flex items-center gap-2 text-sm text-[#10b981]">
+            <MapPin className="w-4 h-4" />
+            Location acquired automatically
+          </div>
+          <div className="text-sm text-zinc-300 bg-black/30 p-2 rounded-lg border border-emerald-900/50">
+             <span className="mr-2">📍</span> 
+             {address ?? `${lat.toFixed(5)}, ${lon.toFixed(5)}`}
+          </div>
+          {!address && (
+            <p className="text-xs text-zinc-500">Could not resolve address — coordinates will still be saved.</p>
+          )}
+        </div>
+      )}
 
-      {/* Description (optional) */}
+      {/* Description (mandatory) */}
       <div>
         <label className="text-sm text-[#71717a] block mb-2">
-          Additional Details <span className="text-zinc-600">(optional)</span>
+          Additional Details <span className="text-red-500">*</span>
         </label>
         <textarea
           value={userDescription}
           onChange={(e) => setUserDescription(e.target.value)}
-          placeholder="Provide more context about the issue..."
+          placeholder="Describe the issue and its location. Example: Large pothole on the left side of MG Road, just before the traffic light near State Bank."
+          minLength={20}
+          maxLength={500}
+          required
           rows={3}
           className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-sm text-[#fafafa] p-3 focus:outline-none focus:ring-2 focus:ring-[#10b981]/50 resize-none"
         />
@@ -442,9 +421,9 @@ export function IssueUploader() {
       )}
 
       <Button
-        onClick={handleSubmit}
+        onClick={() => handleSubmit()}
         disabled={
-          !file || state === "analyzing" || state === "uploading" || !!errorMsg
+          !file || lat === null || lon === null || state === "analyzing" || state === "uploading" || !!errorMsg
         }
         className="w-full py-3 rounded-xl bg-[#10b981] hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium text-sm"
       >

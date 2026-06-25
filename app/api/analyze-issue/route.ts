@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GeminiResponseSchema, SubmitIssueSchema } from "@/lib/schemas";
 import { GeminiAnalysisResult, Ticket, TicketStatus } from "@/types";
-import { checkRateLimit, getClientIp } from "@/lib/rateLimiter";
+import { checkRateLimit, getClientIp, checkCooldown, setCooldown } from "@/lib/rateLimiter";
 import { withRetry } from "@/lib/retry";
+import { haversineDistance } from "@/lib/haversine";
+import { isWithinSupportedCity } from "@/lib/cityBoundary";
+import { calculatePriority } from "@/lib/priority";
 import { v4 as uuidv4 } from "uuid";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +45,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 0.5 Cooldown check (20 minutes)
+    const cooldownResult = checkCooldown(clientIp);
+    if (!cooldownResult.allowed) {
+      const minutes = Math.ceil(cooldownResult.remainingSeconds / 60);
+      return NextResponse.json(
+        {
+          error: `Spam prevention: You can submit another report in ${minutes} minute${minutes !== 1 ? 's' : ''}.`,
+          retryAfter: cooldownResult.remainingSeconds,
+        },
+        { status: 429 }
+      );
+    }
+
     // 1. Parse multipart form data
     const formData = await req.formData();
     const file = formData.get("image") as File | null;
@@ -53,9 +69,21 @@ export async function POST(req: NextRequest) {
       (formData.get("citizenUid") as string | null) ?? undefined;
     const userDescription =
       (formData.get("userDescription") as string | null) ?? undefined;
+    const forceSubmit = formData.get("forceSubmit") === "true";
 
     if (!file) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 });
+    }
+
+    if (!userDescription || userDescription.trim().length < 20) {
+      return NextResponse.json({ error: "Description must be at least 20 characters long." }, { status: 400 });
+    }
+
+    if (!isWithinSupportedCity(latitude, longitude)) {
+      return NextResponse.json(
+        { error: "Reports can only be submitted within supported cities." },
+        { status: 400 }
+      );
     }
 
     // 2. Validate non-file fields
@@ -177,6 +205,7 @@ export async function POST(req: NextRequest) {
       rawText = JSON.stringify({
         category: "Pothole",
         severity: "Medium",
+        department: "Roads & Highways",
         description:
           "Mocked description due to API quota limits. Looks like an infrastructure issue.",
         confidenceScore: 0.95,
@@ -225,12 +254,89 @@ export async function POST(req: NextRequest) {
       ],
       citizenUid: citizenUid ?? undefined,
       aiConfidence: aiData.confidenceScore,
-      upvotes: 0,
+      upvotes: 1,
+      priority: calculatePriority(1),
       isValidIssue: aiData.isValidIssue,
       emergencyAlertTriggered: emergencyTriggered,
+      assignedDepartment: aiData.department,
     };
     if (citizenEmail) {
       ticket.citizenEmail = citizenEmail;
+    }
+
+    // 9.5 Duplicate Detection -> Auto-Clustering
+    if (aiData.isValidIssue) {
+      const snapshot = await adminDb
+        .collection("tickets")
+        .where("category", "==", aiData.category)
+        .where("status", "in", ["Reported", "AI Verified", "Dispatched"])
+        .get();
+
+      let closest: { id: string; distance: number; upvotes: number } | null = null;
+
+      for (const doc of snapshot.docs) {
+        const data = doc.data() as Ticket;
+        const distance = haversineDistance(latitude, longitude, data.latitude, data.longitude);
+
+        if (distance <= 30) {
+          if (!closest || distance < closest.distance) {
+            closest = { id: doc.id, distance, upvotes: data.upvotes || 0 };
+          }
+        }
+      }
+
+      if (closest) {
+        const ticketRef = adminDb.collection("tickets").doc(closest.id);
+        const reportsRef = ticketRef.collection("reports");
+        
+        try {
+          await adminDb.runTransaction(async (tx) => {
+            const query = citizenUid 
+              ? reportsRef.where("userId", "==", citizenUid).limit(1)
+              : reportsRef.where("clientIp", "==", clientIp).limit(1);
+            
+            const existing = await tx.get(query);
+            if (!existing.empty) {
+              throw new Error("ALREADY_REPORTED");
+            }
+            
+            const doc = await tx.get(ticketRef);
+            const currentUpvotes = doc.data()?.upvotes || 0;
+            const newUpvotes = currentUpvotes + 1;
+            
+            const newReportRef = reportsRef.doc();
+            tx.set(newReportRef, {
+              id: newReportRef.id,
+              userId: citizenUid || null,
+              clientIp,
+              description: aiData.description,
+              imageUrl,
+              latitude,
+              longitude,
+              createdAt: now
+            });
+            
+            tx.update(ticketRef, {
+              upvotes: newUpvotes,
+              priority: calculatePriority(newUpvotes)
+            });
+          });
+          
+          if (aiData.isValidIssue) setCooldown(clientIp);
+          
+          return NextResponse.json({ 
+            message: "Issue clustered successfully.",
+            ticket: { id: closest.id }, 
+            analysis: { ...aiData, emergencyTriggered, emergencyReason } 
+          }, { status: 201 });
+          
+        } catch (txErr: any) {
+          if (txErr.message === "ALREADY_REPORTED") {
+            return NextResponse.json({ error: "You have already reported this issue." }, { status: 409 });
+          }
+          throw txErr;
+        }
+      }
     }
 
     // 10. Write ticket to Firestore if valid (discard if invalid)
@@ -239,6 +345,17 @@ export async function POST(req: NextRequest) {
         await withRetry(
           async () => {
             await adminDb.collection("tickets").doc(ticketId).set(ticket);
+            const reportId = uuidv4();
+            await adminDb.collection("tickets").doc(ticketId).collection("reports").doc(reportId).set({
+              id: reportId,
+              userId: citizenUid || null,
+              clientIp,
+              description: aiData.description,
+              imageUrl,
+              latitude,
+              longitude,
+              createdAt: now
+            });
           },
           { maxAttempts: 3 },
         );
@@ -247,6 +364,11 @@ export async function POST(req: NextRequest) {
       }
     } catch (dbError) {
       console.warn("Failed to save to Firestore (DB may not be initialized). Returning AI result anyway.", dbError);
+    }
+
+    // 10.5 Update Cooldown on successful submission
+    if (aiData.isValidIssue) {
+      setCooldown(clientIp);
     }
 
     // 11. Return result to client

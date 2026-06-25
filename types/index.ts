@@ -8,7 +8,6 @@ export type Category =
 export type TicketStatus =
   | "Reported"
   | "AI Verified"
-  | "Community Flagged"
   | "Dispatched"
   | "Resolved"
   | "Rejected";
@@ -17,6 +16,16 @@ export interface StatusEvent {
   status: TicketStatus;
   timestamp: string; // ISO string
   note?: string; // optional human-readable reason
+}
+
+export interface Report {
+  id: string;
+  userId?: string;
+  description: string;
+  imageUrl: string;
+  latitude: number;
+  longitude: number;
+  createdAt: string; // ISO string
 }
 
 export interface Ticket {
@@ -39,12 +48,15 @@ export interface Ticket {
   emergencyAlertTriggered?: boolean;
   assignedDepartment?: string;
   assignedWorkerId?: string;
+  imageHash?: string;
+  priority: number;
 }
 
 export interface GeminiAnalysisResult {
   isValidIssue: boolean;
   category: Category;
   severity: Severity;
+  department: string;
   description: string;
   confidenceScore: number;
   emergencyTriggered: boolean;

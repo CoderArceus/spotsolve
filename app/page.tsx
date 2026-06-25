@@ -40,21 +40,21 @@ export default function Home() {
               <Activity className="w-4 h-4 text-emerald-400" /> Spot&Solve V2 is live
             </div>
             
-            <h1 className="text-[64px] font-bold text-white tracking-tight leading-[1.05] mb-6">
+            <h1 className="text-5xl md:text-[64px] font-bold text-white tracking-tight leading-[1.05] mb-6">
               Community issues,<br />
               <span className="text-emerald-400">resolved in seconds.</span>
             </h1>
             
-            <p className="text-[17px] text-zinc-400 max-w-md leading-relaxed mb-10">
+            <p className="text-base md:text-[17px] text-zinc-400 max-w-md leading-relaxed mb-10">
               Snap a photo of a pothole, leak, or hazard. Our AI validates, categorizes, and routes it directly to the right city engineering team — completely autonomously.
             </p>
 
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
               <Link
                 href="/report"
                 className={cn(
                   buttonVariants({ variant: "default" }),
-                  "bg-emerald-500 hover:bg-emerald-400 text-black rounded-full px-8 py-6 text-base font-bold transition-all hover:scale-105 hover:shadow-[0_0_20px_rgba(0,220,130,0.3)] gap-2 group"
+                  "bg-emerald-500 hover:bg-emerald-400 text-black rounded-full px-8 py-6 text-base font-bold transition-all hover:scale-105 hover:shadow-[0_0_20px_rgba(0,220,130,0.3)] gap-2 group w-full sm:w-auto justify-center"
                 )}
               >
                 Report an Issue <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -63,7 +63,7 @@ export default function Home() {
                 href="/map"
                 className={cn(
                   buttonVariants({ variant: "outline" }),
-                  "glass hover:bg-white/10 text-white rounded-full px-8 py-6 text-base font-semibold transition-all hover:scale-105 gap-2"
+                  "glass hover:bg-white/10 text-white rounded-full px-8 py-6 text-base font-semibold transition-all hover:scale-105 gap-2 w-full sm:w-auto justify-center"
                 )}
               >
                 View Live Map

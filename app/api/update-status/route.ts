@@ -6,8 +6,8 @@ import { TicketStatus, StatusEvent } from "@/types";
 // Valid forward-only transitions — you cannot go backwards
 const VALID_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
   "Reported":          ["AI Verified", "Rejected"],
-  "AI Verified":       ["Community Flagged", "Dispatched"],
-  "Community Flagged": ["Dispatched"],
+  "AI Verified":       ["Dispatched"],
+  "Dispatched":        ["Resolved"],
   "Dispatched":        ["Resolved"],
   "Resolved":          [],
   "Rejected":          [],

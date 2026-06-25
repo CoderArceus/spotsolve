@@ -48,16 +48,6 @@ export async function POST(req: NextRequest) {
       upvotes: FieldValue.increment(1),
     };
 
-    const COMMUNITY_FLAG_THRESHOLD = 5;
-    if (newCount >= COMMUNITY_FLAG_THRESHOLD && data.status === "AI Verified") {
-      update.status = "Community Flagged";
-      update.statusHistory = FieldValue.arrayUnion({
-        status: "Community Flagged",
-        timestamp: new Date().toISOString(),
-        note: `Reached ${COMMUNITY_FLAG_THRESHOLD} community upvotes`,
-      });
-    }
-
     await ref.update(update);
 
     return NextResponse.json({ success: true, upvotes: newCount });

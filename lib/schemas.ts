@@ -10,6 +10,15 @@ export const GeminiResponseSchema = z.object({
     "Invalid",
   ]),
   severity: z.enum(["Low", "Medium", "High", "Critical"]),
+  department: z.enum([
+    "Roads & Highways",
+    "Water & Sanitation",
+    "Electricity Board",
+    "Parks & Recreation",
+    "Traffic Authority",
+    "Emergency Services",
+    "General Maintenance"
+  ]),
   description: z.string().min(10),
   confidenceScore: z.number().min(0).max(1),
 });

@@ -11,34 +11,35 @@
 
 ## 🌟 About
 
-**Spot&Solve** is a civic technology platform that empowers citizens to report community issues—such as potholes, broken streetlights, or illegal dumping—with just a photo. 
+**Spot&Solve** is a civic technology platform developed for a hackathon that empowers citizens to report community issues—such as potholes, broken streetlights, or illegal dumping—with just a photo. 
 
-Instead of waiting days for human triaging, Spot&Solve uses **Google Gemini Vision AI** to instantly analyze the uploaded photo, categorize the issue, determine its severity, and auto-dispatch tickets. Built with a stunning, motion-rich user interface, Spot&Solve makes community maintenance transparent and engaging.
+Instead of waiting days for human triaging, Spot&Solve uses **Google Gemini Vision AI** to instantly analyze the uploaded photo, categorize the issue, determine its severity, and auto-dispatch tickets. Currently, tickets are auto-dispatched by persisting them to Firestore with structured metadata, queued for consumption by a mock municipal admin dashboard or future government APIs.
 
 ## 🚀 Key Features
 
-- **🤖 AI Auto-Triage**: Snap a picture, and Gemini AI will automatically generate a description, categorize the issue, and assign a severity level.
+- **🤖 AI Auto-Triage & Gatekeeping**: Snap a picture, and Gemini AI will automatically generate a description, categorize the issue, and assign a severity level. The AI prompt is strictly configured to reject non-civic issues, screenshots, and irrelevant images to maintain database integrity.
+- **📍 Reverse Geocoding & City Boundaries**: Automatically captures GPS coordinates and translates them into human-readable addresses using the Nominatim API. It also performs server-side boundary validation to ensure reports are only accepted within supported city limits.
+- **🔄 Auto-Clustering & Logarithmic Priority**: Prevents duplicate spam by automatically clubbing reports within 30 meters of each other into the same ticket. Each unique report increments the ticket's confirmation count, which dynamically calculates and scales the Priority Score logarithmically.
+- **📸 Camera-Only Uploads**: Bypasses the device gallery and forces real-time WebRTC camera uploads to ensure all photos are genuine and current, drastically reducing spam.
+- **🛡️ Spam Prevention & Rate Limiting**: Employs mandatory 20-minute IP cooldowns and requires Google Authenticated accounts to maintain high signal-to-noise ratios.
 - **🗺️ Live Heatmap**: An interactive Mapbox implementation displaying all active tickets in your city in real-time.
-- **🏆 Gamification**: Users earn XP, level up, and collect badges (e.g., "First Responder", "Pothole Hunter") for submitting valid reports.
-- **🔐 Seamless Auth**: Google and Anonymous Guest sign-in powered by Firebase Authentication.
-- **⚡ Real-time Feed**: A stunning "Community" dashboard where users can see and upvote recent reports.
-- **📱 Mobile Optimized**: Beautiful, app-like UI with a floating dock, built for taking photos on the go using WebRTC camera integration.
+- **⚡ Real-time Feed**: A "Community" dashboard where users can see recent reports and their statuses.
 
 ## 🛠️ Tech Stack
 
 - **Framework:** [Next.js 14](https://nextjs.org/) (App Router)
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS, Framer Motion, Shadcn UI
-- **Backend & Database:** Firebase (Firestore, Storage, Admin SDK)
+- **Backend & Database:** Firebase (Firestore, Admin SDK)
 - **Authentication:** Firebase Auth
-- **AI Integration:** Google Gen AI SDK (Gemini 1.5 Flash/Pro)
+- **AI Integration:** Google Gen AI SDK (Gemini 2.5 Flash)
 - **Maps:** Mapbox GL JS
-- **Rate Limiting:** Upstash Redis
+- **Geocoding:** Nominatim OpenStreetMap API
 
 ## 💻 Getting Started
 
 ### Prerequisites
-Make sure you have Node.js (v18+) installed. You will also need active accounts for Firebase, Mapbox, Google Gemini, and Upstash Redis.
+Make sure you have Node.js (v18+) installed. You will also need active accounts for Firebase, Mapbox, and Google Gemini.
 
 ### 1. Clone the repository
 ```bash
@@ -61,10 +62,6 @@ GEMINI_API_KEY=your_gemini_api_key
 # Mapbox
 NEXT_PUBLIC_MAPBOX_TOKEN=your_mapbox_token
 
-# Upstash Redis
-UPSTASH_REDIS_REST_URL=your_upstash_url
-UPSTASH_REDIS_REST_TOKEN=your_upstash_token
-
 # Firebase Client
 NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
@@ -83,10 +80,6 @@ FIREBASE_PRIVATE_KEY="your_private_key"
 npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) in your browser to see the app.
-
-## 📁 Project Structure
-
-Check out the [codemap.md](./codemap.md) for a detailed breakdown of the codebase architecture and directory structure!
 
 ## 🤝 Contributing
 

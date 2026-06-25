@@ -6,7 +6,6 @@ import { TicketStatus, StatusEvent } from "@/types";
 const PIPELINE: TicketStatus[] = [
   "Reported",
   "AI Verified",
-  "Community Flagged",
   "Dispatched",
   "Resolved",
 ];
@@ -14,7 +13,6 @@ const PIPELINE: TicketStatus[] = [
 const STAGE_LABELS: Record<TicketStatus, { label: string; sublabel: string }> = {
   "Reported":          { label: "Reported",    sublabel: "Issue submitted by citizen"        },
   "AI Verified":       { label: "AI Verified", sublabel: "Gemini confirmed it's a real issue" },
-  "Community Flagged": { label: "Community",   sublabel: "5+ citizens corroborated this"     },
   "Dispatched":        { label: "Dispatched",  sublabel: "Sent to municipal team"            },
   "Resolved":          { label: "Resolved",    sublabel: "Issue confirmed fixed"             },
   "Rejected":          { label: "Rejected",    sublabel: "Not a valid public issue"          },
