@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GeminiResponseSchema, SubmitIssueSchema } from "@/lib/schemas";
-import { GeminiAnalysisResult, Ticket } from "@/types";
+import { GeminiAnalysisResult, Ticket, TicketStatus } from "@/types";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimiter";
 import { withRetry } from "@/lib/retry";
 import { v4 as uuidv4 } from "uuid";
@@ -49,6 +49,8 @@ export async function POST(req: NextRequest) {
     const longitude = parseFloat(formData.get("longitude") as string);
     const citizenEmail =
       (formData.get("citizenEmail") as string | null) ?? undefined;
+    const citizenUid =
+      (formData.get("citizenUid") as string | null) ?? undefined;
     const userDescription =
       (formData.get("userDescription") as string | null) ?? undefined;
 
@@ -204,16 +206,24 @@ export async function POST(req: NextRequest) {
     const aiData = validated.data;
 
     // 9. Create ticket object
+    const initialStatus: TicketStatus = aiData.isValidIssue ? "AI Verified" : "Rejected";
+    const now = new Date().toISOString();
+
     const ticket: Ticket = {
       id: ticketId,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
       imageUrl,
       latitude,
       longitude,
       category: aiData.category,
       severity: aiData.severity,
       description: aiData.description,
-      status: aiData.isValidIssue ? "Pending Verification" : "Resolved",
+      status: initialStatus,
+      statusHistory: [
+        { status: "Reported", timestamp: now },
+        { status: initialStatus, timestamp: now, note: `AI confidence: ${(aiData.confidenceScore * 100).toFixed(0)}%` },
+      ],
+      citizenUid: citizenUid ?? undefined,
       aiConfidence: aiData.confidenceScore,
       upvotes: 0,
       isValidIssue: aiData.isValidIssue,
@@ -223,14 +233,18 @@ export async function POST(req: NextRequest) {
       ticket.citizenEmail = citizenEmail;
     }
 
-    // 10. Write ticket to Firestore (non-blocking, don't crash if DB not initialized)
+    // 10. Write ticket to Firestore if valid (discard if invalid)
     try {
-      await withRetry(
-        async () => {
-          await adminDb.collection("tickets").doc(ticketId).set(ticket);
-        },
-        { maxAttempts: 3 },
-      );
+      if (aiData.isValidIssue) {
+        await withRetry(
+          async () => {
+            await adminDb.collection("tickets").doc(ticketId).set(ticket);
+          },
+          { maxAttempts: 3 },
+        );
+      } else {
+        console.log(`[analyze-issue] Discarding invalid report: ${ticketId}`);
+      }
     } catch (dbError) {
       console.warn("Failed to save to Firestore (DB may not be initialized). Returning AI result anyway.", dbError);
     }

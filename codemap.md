@@ -1,80 +1,56 @@
-# Spot&Solve — Hyperlocal Issue Dispatcher (Code Map)
+# Spot&Solve - Codebase Map
 
-Welcome to the Spot&Solve codebase! This document provides a high-level overview of the architecture and key files to help agents (and humans) swiftly understand the repository.
+This document outlines the current architecture and directory structure of the **Spot&Solve** application (built with Next.js 14 App Router, Firebase, Mapbox, and Google Gemini).
 
-## Overview
-Spot&Solve is a Next.js 14 App Router application that allows citizens to report public infrastructure issues (like potholes or broken streetlights) by uploading photos. The app uses **Google Gemini 1.5 Flash** (via the `@google/genai` SDK) to automatically analyze the photo, determine the issue category, assign a severity level, and autonomously dispatch critical alerts if a life-safety hazard is detected.
+## 📂 Directory Structure
 
-The backend relies on **Firebase Firestore** for database records and **Firebase Storage** (currently bypassed for Base64 Data URIs to avoid billing limits, though the code supports it).
-
-## Tech Stack
-- **Framework:** Next.js 14 (App Router)
-- **Styling:** Tailwind CSS + shadcn/ui
-- **AI Model:** Gemini 1.5 Flash (Multimodal + Tool Calling)
-- **Database:** Firebase Firestore
-- **Validation:** Zod
-
----
-
-## Directory Structure
-
-```
-community-hero/
-├── app/
-│   ├── layout.tsx                     # Root layout, dark theme navbar
-│   ├── page.tsx                       # Landing page -> redirects to /report
-│   ├── report/
-│   │   └── page.tsx                   # Citizen portal (Submit an issue)
-│   ├── dashboard/
-│   │   └── page.tsx                   # City dashboard (Live ticket feed & map)
-│   ├── api/
-│   │   ├── analyze-issue/
-│   │   │   └── route.ts               # Core AI logic (Gemini analysis)
-│   │   └── upvote/
-│   │       └── route.ts               # Upvote an existing ticket
-├── components/
-│   ├── ui/                            # shadcn/ui components (Buttons, inputs, tabs)
-│   ├── IssueUploader.tsx              # Main drag-and-drop report component
-│   ├── TicketFeed.tsx                 # Live ticket list with severity badges
-│   ├── TicketMap.tsx                  # react-leaflet interactive map (client-only)
-│   └── StatsDashboard.tsx             # City-wide impact numbers
-├── lib/
-│   ├── firebase.ts                    # Firebase client initialization
-│   ├── firebase-admin.ts              # Firebase Admin SDK (server-side writes)
-│   ├── gemini.ts                      # Gemini client, system prompts, schemas, tools
-│   └── schemas.ts                     # Zod schemas (Validation for UI & API)
-├── types/
-│   └── index.ts                       # Core TypeScript interfaces (Severity, Category, Ticket)
-└── .env.local                         # API keys (Gemini, Firebase)
+```text
+.
+├── app/                      # Next.js App Router (Frontend Pages & Backend APIs)
+│   ├── api/                  # Backend Serverless Functions
+│   │   ├── analyze-issue/    # POST: Receives images, calls Gemini AI, creates Firestore ticket
+│   │   ├── tickets/          # GET: Fetches ticket feed from Firestore
+│   │   └── upvote/           # POST: Increments upvote count on a ticket
+│   ├── community/            # Community Feed Page (Displays all reported issues)
+│   ├── map/                  # Live Map Page (Mapbox integration showing issue locations)
+│   ├── profile/              # User Profile Dashboard (Shows stats, badges, and user info)
+│   ├── report/               # Issue Reporting Page (Hosts the IssueUploader)
+│   ├── layout.tsx            # Root Layout (Wraps app in AuthProvider and renders Navbar)
+│   └── page.tsx              # Landing Page (Hero section)
+│
+├── components/               # React UI Components
+│   ├── IssueUploader.tsx     # Complex form for WebRTC camera, file uploads, and submission
+│   ├── LoginModal.tsx        # Firebase Auth popup (Google & Anonymous)
+│   ├── Navbar.tsx            # Floating bottom dock navigation
+│   ├── TicketMapClient.tsx   # Mapbox implementation for rendering issue pins
+│   ├── HeroesLeaderboard.tsx # Gamification leaderboard component
+│   └── ui/                   # Reusable Shadcn UI components (buttons, cards, progress, etc)
+│
+├── lib/                      # Utilities and Integrations
+│   ├── AuthContext.tsx       # Global React Context tracking Firebase Auth state
+│   ├── firebase.ts           # Firebase Client SDK initialization (Auth, Firestore, Storage)
+│   ├── firebase-admin.ts     # Firebase Admin SDK for secure backend API operations
+│   ├── gemini.ts             # Google Gen AI integration logic
+│   ├── imageValidator.ts     # Client-side image compression and validation
+│   └── rateLimiter.ts        # Upstash Redis rate limiting for API routes
+│
+└── types/                    # TypeScript Type Definitions
+    └── index.ts              # Interfaces for Tickets, Users, and Analysis Results
 ```
 
----
+## 🏗️ Core Architecture Overview
 
-## Core File Deep Dive
+### 1. Authentication (Firebase Auth)
+- Handled client-side via `lib/firebase.ts` and `lib/AuthContext.tsx`.
+- The `<AuthProvider>` wraps the root layout.
+- The `LoginModal.tsx` provides UI for Google and Guest sign-ins. Unauthenticated users are prompted to sign in when accessing protected features like the `/profile` page.
 
-### 1. `app/api/analyze-issue/route.ts`
-The heart of the application. When a user submits an image:
-1. Converts the image file to a Base64 string for Gemini inline data.
-2. Uses `gemini-1.5-flash` in a **first pass** to evaluate the image against the `CRITICAL_ALERT_TOOL`. If it's a life-safety issue, Gemini autonomously triggers the tool.
-3. Makes a **second pass** requesting `application/json` output matching `RESPONSE_SCHEMA`.
-4. Parses the text, validates it via Zod (`GeminiResponseSchema`), and writes the final `Ticket` to Firestore via `adminDb`.
-5. *Note: Features a try/catch fallback to mock data if the API hits a 429 Quota Exceeded error.*
+### 2. Issue Reporting Flow (Gemini AI + Storage)
+- **Frontend**: Users capture a photo via WebRTC or file upload in `IssueUploader.tsx`. Client-side compression runs (`lib/imageValidator.ts`).
+- **Backend API**: The `/api/analyze-issue` route receives the payload.
+- **AI Processing**: `lib/gemini.ts` analyzes the image for validity, category, and severity.
+- **Database**: If valid, the image is uploaded to Firebase Storage and a ticket document is written to Firestore via `lib/firebase-admin.ts`.
 
-### 2. `lib/gemini.ts`
-Configuration for the Gemini API.
-- Defines the `SYSTEM_PROMPT` guiding the AI to evaluate images and assign hazard severity (Low, Medium, High, Critical).
-- Defines the `CRITICAL_ALERT_TOOL` declaration.
-- Contains the `handleToolCall` function which closes the agentic loop when Gemini requests an emergency dispatch.
-
-### 3. `components/IssueUploader.tsx`
-Client component for the `/report` page.
-- Handles HTML5 drag-and-drop for images.
-- Captures geolocation (Latitude/Longitude).
-- Submits `FormData` to `/api/analyze-issue`.
-- Renders the resulting AI analysis, severity badge, and emergency dispatch notifications.
-
-### 4. `types/index.ts` & `lib/schemas.ts`
-These files are the source of truth for the data model.
-- `Category` must be one of: `"Pothole", "Water Leak", "Broken Streetlight", "Waste Management", "Invalid"`.
-- `Severity` must be one of: `"Low", "Medium", "High", "Critical"`.
-- Zod schemas ensure that the API and UI are always dealing with strictly typed and valid data from the AI.
+### 3. Data Visualization (Mapbox & Feed)
+- The `/community` route fetches the latest issues via `/api/tickets` and renders them in an `InfiniteTicketFeed.tsx`.
+- The `/map` route plots the coordinates of these tickets onto a dark-themed Mapbox GL instance via `TicketMapClient.tsx`.

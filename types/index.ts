@@ -6,10 +6,18 @@ export type Category =
   | "Waste Management"
   | "Invalid";
 export type TicketStatus =
-  | "Pending Verification"
-  | "Verified"
+  | "Reported"
+  | "AI Verified"
+  | "Community Flagged"
   | "Dispatched"
-  | "Resolved";
+  | "Resolved"
+  | "Rejected";
+
+export interface StatusEvent {
+  status: TicketStatus;
+  timestamp: string; // ISO string
+  note?: string; // optional human-readable reason
+}
 
 export interface Ticket {
   id: string;
@@ -21,11 +29,16 @@ export interface Ticket {
   severity: Severity;
   description: string;
   status: TicketStatus;
+  statusHistory: StatusEvent[];
+  resolvedAt?: string;
   citizenEmail?: string;
+  citizenUid?: string;
   aiConfidence: number;
   upvotes: number;
   isValidIssue: boolean;
   emergencyAlertTriggered?: boolean;
+  assignedDepartment?: string;
+  assignedWorkerId?: string;
 }
 
 export interface GeminiAnalysisResult {

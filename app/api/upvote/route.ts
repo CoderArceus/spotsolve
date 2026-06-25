@@ -35,12 +35,32 @@ export async function POST(req: NextRequest) {
     const { adminDb } = await import("@/lib/firebase-admin");
     const { FieldValue } = await import("firebase-admin/firestore");
 
-    await adminDb
-      .collection("tickets")
-      .doc(ticketId)
-      .update({ upvotes: FieldValue.increment(1) });
+    const ref = adminDb.collection("tickets").doc(ticketId);
+    const snap = await ref.get();
 
-    return NextResponse.json({ success: true });
+    if (!snap.exists) {
+      return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
+    }
+
+    const data = snap.data()!;
+    const newCount = (data.upvotes ?? 0) + 1;
+    const update: Record<string, unknown> = {
+      upvotes: FieldValue.increment(1),
+    };
+
+    const COMMUNITY_FLAG_THRESHOLD = 5;
+    if (newCount >= COMMUNITY_FLAG_THRESHOLD && data.status === "AI Verified") {
+      update.status = "Community Flagged";
+      update.statusHistory = FieldValue.arrayUnion({
+        status: "Community Flagged",
+        timestamp: new Date().toISOString(),
+        note: `Reached ${COMMUNITY_FLAG_THRESHOLD} community upvotes`,
+      });
+    }
+
+    await ref.update(update);
+
+    return NextResponse.json({ success: true, upvotes: newCount });
   } catch (err) {
     console.error("[upvote] Error:", err);
     return NextResponse.json(

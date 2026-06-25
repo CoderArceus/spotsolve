@@ -36,7 +36,7 @@ export default function RootLayout({
       >
         <AuthProvider>
           <Navbar />
-          <main className="max-w-6xl mx-auto px-6 pt-24 pb-16">{children}</main>
+          <main className="max-w-6xl mx-auto px-6 pb-16">{children}</main>
         </AuthProvider>
       </body>
     </html>

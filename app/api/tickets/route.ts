@@ -6,59 +6,55 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    // Extract and validate pagination params
     const searchParams = req.nextUrl.searchParams;
-    const limit = parseInt(searchParams.get("limit") ?? "20");
-    const offset = parseInt(searchParams.get("offset") ?? "0");
-
-    const pagination = PaginationSchema.safeParse({ limit, offset });
-    if (!pagination.success) {
-      return NextResponse.json(
-        {
-          error: "Invalid pagination params",
-          details: pagination.error.flatten(),
-        },
-        { status: 400 },
-      );
-    }
+    const limit  = parseInt(searchParams.get("limit")  ?? "20");
+    const cursor = searchParams.get("cursor"); // ISO string of last createdAt
 
     const { adminDb } = await import("@/lib/firebase-admin");
 
-    // Fetch all tickets first (no composite index needed)
-    const allSnap = await adminDb
+    let query = adminDb
       .collection("tickets")
+      .where("isValidIssue", "==", true)
       .orderBy("createdAt", "desc")
-      .get();
+      .limit(limit);
 
-    const allTickets = allSnap.docs
-      .map((d) => {
-        const data = d.data();
-        return {
-          id: d.id,
-          ...data,
-          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
-        } as Ticket;
-      })
-      .filter((t) => t.isValidIssue);
-    const total = allTickets.length;
+    // If cursor exists, start after it
+    if (cursor) {
+      // In Firestore, if createdAt is a string, we pass the string cursor.
+      // If it is a timestamp, we pass new Date(cursor) or Timestamp.fromDate
+      // Since it might be a string, let's try passing the string directly first.
+      query = query.startAfter(cursor);
+    }
 
-    // Apply pagination client-side
-    const tickets = allTickets.slice(
-      pagination.data.offset,
-      pagination.data.offset + pagination.data.limit,
-    );
+    const snap = await query.get();
+
+    const tickets = snap.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        ...data,
+        createdAt: data.createdAt?.toDate
+          ? data.createdAt.toDate().toISOString()
+          : data.createdAt,
+      } as Ticket;
+    });
+
+    const lastDoc = snap.docs[snap.docs.length - 1];
+    let nextCursor = null;
+    if (lastDoc) {
+      const data = lastDoc.data();
+      nextCursor = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt;
+    }
 
     return NextResponse.json(
       {
         tickets,
         pagination: {
-          offset: pagination.data.offset,
-          limit: pagination.data.limit,
-          total,
-          hasMore: pagination.data.offset + pagination.data.limit < total,
+          nextCursor,
+          hasMore: snap.docs.length === limit,
         },
       },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (err) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

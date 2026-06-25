@@ -1,6 +1,7 @@
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
+import { getAuth } from "firebase-admin/auth";
 
 if (!getApps().length) {
   initializeApp({
@@ -20,3 +21,4 @@ try {
   // Ignore error if settings are already configured (Next.js HMR)
 }
 export const adminStorage = getStorage();
+export const adminAuth = getAuth();

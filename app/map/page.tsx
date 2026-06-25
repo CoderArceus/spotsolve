@@ -35,7 +35,7 @@ export default async function MapPage() {
   const validTickets = allTickets.filter((t) => t.isValidIssue);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-24">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-24 pt-10">
       <div>
         <h1 className="text-4xl font-bold text-white tracking-tight">Live Map & Analytics</h1>
         <p className="text-[#a1a1aa] text-sm mt-2">

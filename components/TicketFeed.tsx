@@ -1,21 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronUp, MessageSquare, Share, Clock, MapPin } from "lucide-react";
 import { Ticket } from "@/types";
 import { SeverityBadge } from "./SeverityBadge";
+import { ResolutionTimeline } from "./ResolutionTimeline";
 
 export function TicketFeed({ tickets }: { tickets: Ticket[] }) {
   const [upvoted, setUpvoted] = useState<Set<string>>(new Set());
 
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("spotsolve_upvoted");
+      if (stored) {
+        setUpvoted(new Set(JSON.parse(stored)));
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
   const handleUpvote = async (ticketId: string) => {
     if (upvoted.has(ticketId)) return;
+    
+    const newUpvoted = new Set([...upvoted, ticketId]);
+    setUpvoted(newUpvoted);
+    try {
+      localStorage.setItem("spotsolve_upvoted", JSON.stringify(Array.from(newUpvoted)));
+    } catch (e) {
+      // ignore
+    }
+
     await fetch("/api/upvote", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ticketId }),
     });
-    setUpvoted((prev) => new Set([...prev, ticketId]));
   };
 
   if (tickets.length === 0) {
@@ -68,15 +88,11 @@ export function TicketFeed({ tickets }: { tickets: Ticket[] }) {
             )}
 
             {/* Status Timeline */}
-            <div className="flex items-center gap-2 text-xs font-medium bg-black/40 rounded-lg px-3 py-2 w-fit mb-4 border border-white/5">
-              <div className="flex items-center gap-1.5 text-emerald-400">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                {ticket.status}
-              </div>
-              <span className="text-zinc-600">|</span>
-              <div className="text-zinc-500 flex items-center gap-1">
-                <MapPin className="w-3 h-3" /> Sector {Math.abs(Math.floor(ticket.latitude * 10)) % 20}
-              </div>
+            <div className="mt-4 mb-4">
+              <ResolutionTimeline
+                status={ticket.status}
+                statusHistory={ticket.statusHistory ?? []}
+              />
             </div>
 
             {/* Actions Bar */}
@@ -91,7 +107,7 @@ export function TicketFeed({ tickets }: { tickets: Ticket[] }) {
               </button>
               <button className="flex items-center gap-1.5 text-sm hover:text-white transition-colors">
                 <MessageSquare className="w-4 h-4" />
-                <span className="font-medium">{Math.floor(Math.random() * 20)}</span>
+                <span className="font-medium">{(ticket.id.charCodeAt(0) + ticket.id.charCodeAt(ticket.id.length - 1)) % 20}</span>
               </button>
               <button className="flex items-center gap-1.5 text-sm hover:text-white transition-colors">
                 <Share className="w-4 h-4" />

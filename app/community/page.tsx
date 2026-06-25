@@ -5,37 +5,39 @@ import { HeroesLeaderboard } from "@/components/HeroesLeaderboard";
 import { adminDb } from "@/lib/firebase-admin";
 import { Loader2 } from "lucide-react";
 
-async function getTickets(): Promise<Ticket[]> {
-  try {
-    const snap = await adminDb
-      .collection("tickets")
-      .orderBy("createdAt", "desc")
-      .limit(20)
-      .get();
-    return snap.docs
-      .map((d) => {
-        const data = d.data();
-        return {
-          id: d.id,
-          ...data,
-          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
-        } as Ticket;
-      })
-      .filter((t) => t.isValidIssue);
-  } catch (error) {
-    const err = error as any;
-    if (err?.code === 5 || err?.message?.includes("NOT_FOUND")) {
-      console.log("[community] Firestore not initialized yet");
-      return [];
-    }
-    console.error("[community] Failed to fetch tickets:", error);
-    return [];
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+async function getTickets(): Promise<{ tickets: Ticket[]; nextCursor: string | null }> {
+  const snap = await adminDb
+    .collection("tickets")
+    .where("isValidIssue", "==", true)
+    .orderBy("createdAt", "desc")
+    .limit(20)
+    .get();
+  
+  const tickets = snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      ...data,
+      createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
+    } as Ticket;
+  });
+
+  const lastDoc = snap.docs[snap.docs.length - 1];
+  let nextCursor = null;
+  if (lastDoc) {
+    const data = lastDoc.data();
+    nextCursor = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt;
   }
+
+  return { tickets, nextCursor };
 }
 
 async function FeedContainer() {
-  const initialTickets = await getTickets();
-  return <InfiniteTicketFeed initialTickets={initialTickets} />;
+  const { tickets, nextCursor } = await getTickets();
+  return <InfiniteTicketFeed initialTickets={tickets} nextCursor={nextCursor} />;
 }
 
 function FeedSkeleton() {

@@ -83,7 +83,7 @@ export default function TicketMapClient({ tickets }: Props) {
   return (
     <div
       id="ticket-map"
-      className="w-full h-[480px] rounded-xl overflow-hidden border border-border z-0 relative"
+      className="w-full h-full min-h-[400px] rounded-xl overflow-hidden border border-white/5 z-0 relative"
     />
   );
 }
