@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
     let query = adminDb
       .collection("tickets")
-      .where("isValidIssue", "==", true)
+      // .where("isValidIssue", "==", true) removed to prevent composite index crash on Vercel
       .orderBy("createdAt", "desc")
       .limit(limit);
 

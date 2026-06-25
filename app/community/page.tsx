@@ -9,30 +9,36 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 async function getTickets(): Promise<{ tickets: Ticket[]; nextCursor: string | null }> {
-  const snap = await adminDb
-    .collection("tickets")
-    .where("isValidIssue", "==", true)
-    .orderBy("createdAt", "desc")
-    .limit(20)
-    .get();
-  
-  const tickets = snap.docs.map((d) => {
-    const data = d.data();
-    return {
-      id: d.id,
-      ...data,
-      createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
-    } as Ticket;
-  });
+  try {
+    // Removed .where("isValidIssue", "==", true) to avoid requiring a composite index,
+    // since we now discard invalid reports automatically at creation!
+    const snap = await adminDb
+      .collection("tickets")
+      .orderBy("createdAt", "desc")
+      .limit(20)
+      .get();
+    
+    const tickets = snap.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        ...data,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
+      } as Ticket;
+    });
 
-  const lastDoc = snap.docs[snap.docs.length - 1];
-  let nextCursor = null;
-  if (lastDoc) {
-    const data = lastDoc.data();
-    nextCursor = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt;
+    const lastDoc = snap.docs[snap.docs.length - 1];
+    let nextCursor = null;
+    if (lastDoc) {
+      const data = lastDoc.data();
+      nextCursor = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt;
+    }
+
+    return { tickets, nextCursor };
+  } catch (error) {
+    console.error("[getTickets] Failed to fetch community tickets:", error);
+    return { tickets: [], nextCursor: null };
   }
-
-  return { tickets, nextCursor };
 }
 
 async function FeedContainer() {
