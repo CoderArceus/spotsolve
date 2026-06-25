@@ -8,7 +8,6 @@ const VALID_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
   "Reported":          ["AI Verified", "Rejected"],
   "AI Verified":       ["Dispatched"],
   "Dispatched":        ["Resolved"],
-  "Dispatched":        ["Resolved"],
   "Resolved":          [],
   "Rejected":          [],
 };
