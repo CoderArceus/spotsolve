@@ -9,7 +9,9 @@ interface RateLimitEntry {
 }
 
 const RATE_LIMIT_STORE = new Map<string, RateLimitEntry>();
+const COOLDOWN_STORE = new Map<string, number>();
 const CLEANUP_INTERVAL = 60000; // Clean up every 60 seconds
+const COOLDOWN_MINUTES = 20;
 
 // Start cleanup interval
 if (typeof global !== "undefined") {
@@ -18,6 +20,13 @@ if (typeof global !== "undefined") {
     for (const [key, entry] of RATE_LIMIT_STORE.entries()) {
       if (entry.resetTime < now) {
         RATE_LIMIT_STORE.delete(key);
+      }
+    }
+    
+    const cooldownMs = COOLDOWN_MINUTES * 60 * 1000;
+    for (const [key, time] of COOLDOWN_STORE.entries()) {
+      if (now - time > cooldownMs) {
+        COOLDOWN_STORE.delete(key);
       }
     }
   }, CLEANUP_INTERVAL);
@@ -100,4 +109,23 @@ export function getClientIp(request: Request): string {
   }
 
   return "unknown";
+}
+
+export function checkCooldown(identifier: string): { allowed: boolean; remainingSeconds: number } {
+  const lastSubmitTime = COOLDOWN_STORE.get(identifier);
+  if (!lastSubmitTime) return { allowed: true, remainingSeconds: 0 };
+
+  const now = Date.now();
+  const diffMs = now - lastSubmitTime;
+  const cooldownMs = COOLDOWN_MINUTES * 60 * 1000;
+
+  if (diffMs >= cooldownMs) {
+    return { allowed: true, remainingSeconds: 0 };
+  }
+
+  return { allowed: false, remainingSeconds: Math.ceil((cooldownMs - diffMs) / 1000) };
+}
+
+export function setCooldown(identifier: string) {
+  COOLDOWN_STORE.set(identifier, Date.now());
 }
